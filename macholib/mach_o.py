@@ -132,7 +132,12 @@ ARM_SUBTYPE = {
     8 : "CPU_SUBTYPE_ARM_XSCALE",
     9 : "CPU_SUBTYPE_ARM_V7",
     10 : "CPU_SUBTYPE_ARM_V7F",
+    11 : "CPU_SUBTYPE_ARM_V7S",
     12 : "CPU_SUBTYPE_ARM_V7K"
+}
+
+ARM64_SUBTYPE = {
+    0 : "CPU_SUBTYPE_ARM64_ALL",
 }
 
 VAX_SUBTYPE = {
@@ -171,6 +176,8 @@ def get_cpu_subtype(cpu_type, cpu_subtype):
         subtype = HPPA_SUBTYPE.get(st, st)
     elif cpu_type == 12:
         subtype = ARM_SUBTYPE.get(st, st)
+    elif cpu_type == 12 | _CPU_ARCH_ABI64:
+        subtype = ARM64_SUBTYPE.get(st, st)
     elif cpu_type == 13:
         subtype = MC88_SUBTYPE.get(st, st)
     elif cpu_type == 14:
@@ -398,6 +405,9 @@ LC_SOURCE_VERSION = 0x2a
 LC_DYLIB_CODE_SIGN_DRS = 0x2b
 LC_ENCRYPTION_INFO_64 = 0x2c
 LC_LINKER_OPTION = 0x2d
+LC_LINKER_OPTIMIZATION_HINT = 0x2e
+LC_VERSION_MIN_TVOS = 0x2f
+LC_VERSION_MIN_WATCHOS = 0x30
 
 
 # this is really a union.. but whatever
@@ -777,15 +787,20 @@ class dylinker_command(Structure):
 
 class thread_command(Structure):
     _fields_ = (
+        ('flavor', p_uint32),
+        ('count', p_uint32)
     )
 
     def describe(self):
-        return {}
+        s = {}
+        s['flavor'] = int(self.flavour)
+        s['count'] = int(self.count)
+        return s
 
 class entry_point_command(Structure):
     _fields_ = (
-	    ('entryoff', 	p_uint64),
-	    ('stacksize', 	p_uint64),
+        ('entryoff', 	p_uint64),
+        ('stacksize', 	p_uint64),
     )
 
     def describe(self):
@@ -1042,7 +1057,7 @@ class linkedit_data_command (Structure):
 class version_min_command (Structure):
     _fields_ = (
         ('version', p_uint32), # X.Y.Z is encoded in nibbles xxxx.yy.zz
-        ('reserved', p_uint32),
+        ('sdk', p_uint32),
     )
 
     def describe(self):
@@ -1052,7 +1067,13 @@ class version_min_command (Structure):
         v2 = v & 0xFF
         v = v >> 8
         v1 = v & 0xFFFF
-        return {'version': str(int(v1)) + "." + str(int(v2)) + "." + str(int(v3))}
+        s = int(self.sdk)
+        s3 = s & 0xFF
+        s = s >> 8
+        s2 = s & 0xFF
+        s = s >> 8
+        s1 = s & 0xFFFF
+        return {'version': str(int(v1)) + "." + str(int(v2)) + "." + str(int(v3)), 'sdk': str(int(s1)) + "." + str(int(s2)) + "." + str(int(s3))}
 
 class source_version_command (Structure):
     _fields_ = (
@@ -1183,6 +1204,9 @@ LC_REGISTRY = {
     LC_DYLIB_CODE_SIGN_DRS:  linkedit_data_command,
     LC_ENCRYPTION_INFO_64: encryption_info_command_64,
     LC_LINKER_OPTION:  linker_option_command,
+    LC_LINKER_OPTIMIZATION_HINT:  linkedit_data_command,
+    LC_VERSION_MIN_TVOS: version_min_command,
+    LC_VERSION_MIN_WATCHOS: version_min_command,
 }
 
 LC_NAMES = {
@@ -1229,6 +1253,9 @@ LC_NAMES = {
     LC_DATA_IN_CODE:                'LC_DATA_IN_CODE',
     LC_SOURCE_VERSION:              'LC_SOURCE_VERSION',
     LC_DYLIB_CODE_SIGN_DRS:         'LC_DYLIB_CODE_SIGN_DRS',
+    LC_LINKER_OPTIMIZATION_HINT:    'LC_LINKER_OPTIMIZATION_HINT',
+    LC_VERSION_MIN_TVOS:            'LC_VERSION_MIN_TVOS',
+    LC_VERSION_MIN_WATCHOS:         'LC_VERSION_MIN_WATCHOS',
 }
 
 

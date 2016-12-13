@@ -24,6 +24,7 @@ __all__ = ['MachO']
 _RELOCATABLE = set((
     # relocatable commands that should be used for dependency walking
     LC_LOAD_DYLIB,
+    LC_LOAD_UPWARD_DYLIB,
     LC_LOAD_WEAK_DYLIB,
     LC_PREBOUND_DYLIB,
     LC_REEXPORT_DYLIB,
@@ -31,6 +32,7 @@ _RELOCATABLE = set((
 
 _RELOCATABLE_NAMES = {
     LC_LOAD_DYLIB: 'load_dylib',
+    LC_LOAD_UPWARD_DYLIB: 'load_upward_dylib',
     LC_LOAD_WEAK_DYLIB: 'load_weak_dylib',
     LC_PREBOUND_DYLIB: 'prebound_dylib',
     LC_REEXPORT_DYLIB: 'reexport_dylib',
@@ -259,11 +261,6 @@ class MachOHeader(object):
                 read_bytes, header.sizeofcmds))
         self.total_size = sizeof(self.mach_header) + read_bytes
         self.low_offset = low_offset
-
-        # this header overwrites a segment, what the heck?
-        if self.total_size > low_offset:
-            raise ValueError("total_size > low_offset (%d > %d)" % (
-                self.total_size, low_offset))
 
     def walkRelocatables(self, shouldRelocateCommand=_shouldRelocateCommand):
         """
